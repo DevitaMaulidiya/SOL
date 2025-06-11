@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Penjadwalan Proses: FIFO, SJF, SRF</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: lab(82.49% 19.69 -6.53); }
+    input, select, button { margin: 5px; padding: 5px; }
+    .result { margin-top: 20px; }
+    .gantt { display: flex; margin-top: 10px; }
+    .gantt div {
+      border: 1px solid #333;
+      padding: 10px;
+      margin-right: 2px;
+      background: lightblue;
+      text-align: center;
+      color: hsl(313, 43%, 75%);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>~ 11240016-Devita Maulidiya ~</h1>
+  <h2>Penjadwalan Proses</h2>
+
+  <label>Nama Proses:</label>
+  <input type="text" id="nama" />
+  <label>Waktu Eksekusi:</label>
+  <input type="number" id="waktu" />
+  <button onclick="tambahProses()">Tambah</button>
+
+  <h4>Daftar Proses:</h4>
+  <ul id="daftarProses"></ul>
+
+  <label>Pilih Algoritma:</label>
+  <select id="algoritma">
+    <option value="fifo">FIFO</option>
+    <option value="sjf">SJF</option>
+    <option value="srf">SRF</option>
+  </select>
+  <button onclick="jalankan()">Jalankan</button>
+
+  <div class="result">
+    <h4>Gantt Chart:</h4>
+    <div class="gantt" id="ganttChart"></div>
+    <h4>Hasil Perhitungan:</h4>
+    <ul id="hasilPerhitungan"></ul>
+    <h4>Rata-rata Waiting Time: <span id="rata2"></span></h4>
+  </div>
+
+  <script>
+    let proses = [];
+
+    function tambahProses() {
+      const nama = document.getElementById("nama").value;
+      const waktu = parseInt(document.getElementById("waktu").value);
+      if (nama && waktu > 0) {
+        proses.push({ nama, waktu, sisa: waktu });
+        updateDaftar();
+      }
+    }
+
+    function updateDaftar() {
+      const daftar = document.getElementById("daftarProses");
+      daftar.innerHTML = "";
+      proses.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = `${p.nama} - ${p.waktu} detik`;
+        daftar.appendChild(li);
+      });
+    }
+
+    function jalankan() {
+      const algo = document.getElementById("algoritma").value;
+      const hasilChart = [];
+      let timeline = 0;
+      let prosesCopy = proses.map(p => ({ ...p }));
+
+      if (algo === "fifo") {
+        for (let p of prosesCopy) {
+          hasilChart.push({ nama: p.nama, waktu: p.waktu });
+          p.start = timeline;
+          timeline += p.waktu;
+          p.finish = timeline;
+        }
+      }
+
+      else if (algo === "sjf") {
+        prosesCopy.sort((a, b) => a.waktu - b.waktu);
+        for (let p of prosesCopy) {
+          hasilChart.push({ nama: p.nama, waktu: p.waktu });
+          p.start = timeline;
+          timeline += p.waktu;
+          p.finish = timeline;
+        }
+      }
+
+      else if (algo === "srf") {
+        let time = 0;
+        let ready = [];
+        let done = [];
+        let processes = prosesCopy.map(p => ({ ...p, sisa: p.waktu, start: null }));
+        
+        while (done.length < proses.length) {
+          ready = processes.filter(p => p.sisa > 0);
+          if (ready.length === 0) break;
+          ready.sort((a, b) => a.sisa - b.sisa);
+          let current = ready[0];
+
+          hasilChart.push({ nama: current.nama, waktu: 1 });
+          if (current.start === null) current.start = time;
+          current.sisa--;
+          time++;
+
+          if (current.sisa === 0) {
+            current.finish = time;
+            done.push(current);
+          }
+        }
+        prosesCopy = processes;
+      }
+
+      tampilkanGantt(hasilChart);
+      hitungWaitingTime(prosesCopy);
+    }
+
+    function tampilkanGantt(jadwal) {
+      const gantt = document.getElementById("ganttChart");
+      gantt.innerHTML = "";
+
+      let current = null;
+      let width = 0;
+      let container = [];
+
+      for (let i = 0; i < jadwal.length; i++) {
+        if (jadwal[i].nama !== current) {
+          if (current) {
+            const div = document.createElement("div");
+            div.style.width = `${width * 30}px`;
+            div.textContent = current;
+            gantt.appendChild(div);
+          }
+          current = jadwal[i].nama;
+          width = jadwal[i].waktu;
+        } else {
+          width += jadwal[i].waktu;
+        }
+      }
+
+      if (current) {
+        const div = document.createElement("div");
+        div.style.width = `${width * 30}px`;
+        div.textContent = current;
+        gantt.appendChild(div);
+      }
+    }
+
+    function hitungWaitingTime(prosesList) {
+      const hasil = document.getElementById("hasilPerhitungan");
+      hasil.innerHTML = "";
+      let totalWT = 0;
+
+      for (let p of prosesList) {
+        let wt = (p.finish - p.waktu);
+        totalWT += wt;
+
+        const li = document.createElement("li");
+        li.textContent = `${p.nama} | Waktu Eksekusi: ${p.waktu} | Start: ${p.start} | Finish: ${p.finish} | Waiting Time: ${wt}`;
+        hasil.appendChild(li);
+      }
+
+      const rata2 = totalWT / prosesList.length;
+      document.getElementById("rata2").textContent = rata2.toFixed(2);
+    }
+  </script>
+
+</body>
+</html>
